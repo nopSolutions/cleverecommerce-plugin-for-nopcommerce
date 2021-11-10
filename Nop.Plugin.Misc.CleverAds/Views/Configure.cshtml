@@ -1,0 +1,111 @@
+﻿@model ConfigurationModel
+
+@{
+    Layout = "_ConfigurePlugin";
+}
+
+@if (!Model.IsLocal)
+{
+    @await Component.InvokeAsync("StoreScopeConfiguration")
+
+    <script>
+        $(document).ready(function () {
+            toggleEnabled(@Model.Enabled.ToString().ToLowerInvariant());
+            $('#plugin-enabled').click(function () {
+                var enabled = $(this).is(':checked');
+                $.ajax({
+                    url: '@Url.Action("EnablePlugin", "CleverAds")',
+                    cache: false,
+                    type: 'POST',
+                    dataType: 'json',
+                    data: {
+                        value: enabled
+                    },
+                    success: function (data, textStatus, jqXHR) {
+                        if (data.Result) {
+                            toggleEnabled(enabled);
+                        }
+                    },
+                    error: function (jqXHR, textStatus, errorThrown) {
+                        $('#enablingAlert').click();
+                    }
+                });
+            });
+        });
+
+        function toggleEnabled(value) {
+            if (value) {
+                $('#content-card').showElement();
+                $('#install-card').showElement();
+            } else {
+                $('#content-card').hideElement();
+                $('#install-card').hideElement();
+            }
+        }
+    </script>
+
+    <form asp-controller="CleverAds" asp-action="Configure" method="post">
+        <div class="cards-group">
+            <div class="card card-default">
+                <div class="card-body">
+                    <p>
+                        Advertise your products all over Google's huge network and get more traffic.<br />
+                        <br />
+                    </p>
+                    <div class="form-group row">
+                        <div class="col-md-12">
+                            <div class="onoffswitch">
+                                <input type="checkbox" name="onoffswitch" class="onoffswitch-checkbox" id="plugin-enabled" checked="@Model.Enabled">
+                                <label class="onoffswitch-label" for="plugin-enabled">
+                                    <span class="onoffswitch-inner"
+                                          data-locale-basic="@T("Plugins.Misc.CleverAds.Configuration.Disabled")"
+                                          data-locale-advanced="@T("Plugins.Misc.CleverAds.Configuration.Enabled")"></span>
+                                    <span class="onoffswitch-switch"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="install-card">
+                        <div class="form-group row">
+                            <div class="col-md-3">
+                                <nop-override-store-checkbox asp-for="Email_OverrideForStore" asp-input="Email" asp-store-scope="@Model.ActiveStoreScopeConfiguration" />
+                                <nop-label asp-for="Email" />
+                            </div>
+                            <div class="col-md-9">
+                                <nop-editor asp-for="Email" asp-disabled="@((!string.IsNullOrEmpty(Model.Email)).ToString().ToLowerInvariant())" />
+                                <span asp-validation-for="Email"></span>
+                            </div>
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-md-9 offset-md-3 mb-3">
+                                @if (string.IsNullOrEmpty(Model.Email))
+                                {
+                                    <button type="submit" name="install" class="btn btn-primary">
+                                        @T("Admin.Common.Save")
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button type="submit" name="uninstall" class="btn btn-danger">
+                                        @T("Plugins.Misc.CleverAds.Configuration.Uninstall")
+                                    </button>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrEmpty(Model.Hmac))
+            {
+                <div class="card card-default" id="content-card">
+                    <div class="card-body">
+                        <iframe src="@($"{CleverAdsDefaults.ServiceUrl}?hmac={Model.Hmac}")" title="Clever ‑ Google Ads & Shopping" style="width:100%; height:800px;"></iframe>
+                    </div>
+                </div>
+            }
+        </div>
+    </form>
+
+    <nop-alert asp-alert-id="enablingAlert" asp-alert-message="@T("Admin.Common.Alert.Save.Error")" />
+}
